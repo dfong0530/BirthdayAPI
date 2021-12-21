@@ -20,7 +20,13 @@ class People(Resource):
 
     def put(self):
 
-        person_id = max(birthdays.keys()) + 1
+        if len(birthdays) == 0:
+
+            person_id = 0
+
+        else:
+
+            person_id = max(birthdays.keys()) + 1
 
         args = person_put_args.parse_args()
 
