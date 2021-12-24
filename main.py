@@ -1,77 +1,123 @@
 from flask import Flask, abort, request
-from flask_restful import Api, Resource, reqparse
+from flask_restful import Api, Resource, reqparse, fields, marshal_with
+from flask_sqlalchemy import SQLAlchemy
+
+
+"""
+Change how you get person_id
+
+Account for invalid id's and other errors
+"""
 
 app = Flask(__name__)
 api = Api(app)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 
-birthdays = {}
+db = SQLAlchemy(app)
 
+class BirthdayModel(db.Model):
+
+    id = db.Column(db.Integer, primary_key = True)
+    name = db.Column(db.String(100), nullable = False)
+    birthday = db.Column(db.String(100), nullable = False)
+    phone_number = db.Column(db.String(100), nullable = True)
+
+    def __repr__(self):
+
+        return f"Id: {self.id}, Name: {self.name}, Birthday: {self.birthday}, Phone Number: {self.phone_number}"
+
+#Validate Request forms
 person_put_args = reqparse.RequestParser()
 person_put_args.add_argument("name", type=str, help="Name Required", required=True)
 person_put_args.add_argument("birthday", type=str, help="Birthday Required", required=True)
 person_put_args.add_argument("phone_number", type=str, help="")
 
 
+person_patch_args = reqparse.RequestParser()
+person_patch_args.add_argument("name", type=str, help="Name")
+person_patch_args.add_argument("birthday", type=str, help="Birthday")
+person_patch_args.add_argument("phone_number", type=str, help="Phone Number")
+
+#Converting sql alchemy objects to JSON serializable objects
+resource_fields = {
+
+    "id": fields.Integer,
+    "name": fields.String,
+    "birthday": fields.String,
+    "phone_number": fields.String
+}
+
+#API Resources
 class People(Resource):
 
+    @marshal_with(resource_fields)
     def get(self):
 
-        return birthdays
+        result = BirthdayModel.query.all()
 
+        return result
+
+    @marshal_with(resource_fields)
     def put(self):
-
-        if len(birthdays) == 0:
+        
+        if not len(BirthdayModel.query.all()):
 
             person_id = 0
 
         else:
 
-            person_id = max(birthdays.keys()) + 1
+            person_id = max(BirthdayModel.query.all(), key = lambda x: x.id).id + 1
 
         args = person_put_args.parse_args()
 
-        birthdays[person_id] = args
+        birthdayPerson = BirthdayModel(id = person_id, name = args["name"], birthday = args["birthday"], phone_number = args["phone_number"])
 
-        return args, 201
+        db.session.add(birthdayPerson)
+        db.session.commit()
+
+        return birthdayPerson, 201
 
 
 class Person(Resource):
 
+    @marshal_with(resource_fields)
     def get(self, person_id):
 
-        if person_id not in birthdays:
+        result = BirthdayModel.query.filter_by(id = person_id).first()
 
-            abort("No such id exits!")
-
-        return birthdays[person_id], 200
+        return result, 200
 
 
     def delete(self, person_id):
 
-        if person_id not in birthdays:
-
-            abort("Id does not exist")
-
-        del birthdays[person_id]
+        BirthdayModel.query.filter_by(id = person_id).delete()
+        db.session.commit()
 
         return "", 204
 
-
+    @marshal_with(resource_fields)
     def patch(self, person_id):
 
-        if person_id not in birthdays:
+        args = person_patch_args.parse_args()
+        result = BirthdayModel.query.filter_by(id = person_id).first()
 
-            abort("Id does not exist")
+        if args["name"]:
 
-        for args in request.form:
+            result.name = args["name"]
 
-            if args in birthdays[person_id]:
+        if args["birthday"]:
 
-                birthdays[person_id][args] = request.form[args]
+            result.birthday = args["birthday"]
 
-        return birthdays[person_id], 204
+        if args["phone_number"]:
 
-    
+            result.phone_number = args["phone_number"]
+
+        db.session.commit()
+
+        return result, 204
+
+
 
 api.add_resource(People, "/people")
 api.add_resource(Person, "/people/<int:person_id>")
@@ -79,4 +125,4 @@ api.add_resource(Person, "/people/<int:person_id>")
 
 if __name__ == "__main__":
 
-    app.run(debug=False)
+    app.run(debug=True)
