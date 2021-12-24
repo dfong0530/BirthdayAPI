@@ -78,6 +78,7 @@ class People(Resource):
         return birthdayPerson, 201
 
 
+
 class Person(Resource):
 
     @marshal_with(resource_fields)
