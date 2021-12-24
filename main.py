@@ -85,10 +85,18 @@ class Person(Resource):
 
         result = BirthdayModel.query.filter_by(id = person_id).first()
 
+        if not result:
+
+            abort("Id does not exist.")
+
         return result, 200
 
 
     def delete(self, person_id):
+
+        if not BirthdayModel.query.filter_by(id = person_id).first():
+
+            abort("Id does not exist.")
 
         BirthdayModel.query.filter_by(id = person_id).delete()
         db.session.commit()
@@ -100,6 +108,10 @@ class Person(Resource):
 
         args = person_patch_args.parse_args()
         result = BirthdayModel.query.filter_by(id = person_id).first()
+
+        if not result:
+
+            abort("Id does not exist.")
 
         if args["name"]:
 
