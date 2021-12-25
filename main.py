@@ -2,13 +2,6 @@ from flask import Flask, abort, request
 from flask_restful import Api, Resource, reqparse, fields, marshal_with
 from flask_sqlalchemy import SQLAlchemy
 
-
-"""
-Change how you get person_id
-
-Account for invalid id's and other errors
-"""
-
 app = Flask(__name__)
 api = Api(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
