@@ -103,6 +103,7 @@ class Person(Resource):
         args = person_patch_args.parse_args()
         result = BirthdayModel.query.filter_by(id = person_id).first()
 
+    
         if not result:
 
             abort("Id does not exist.")
